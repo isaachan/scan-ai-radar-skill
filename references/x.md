@@ -2,12 +2,12 @@
 
 ## 目标
 
-用 X 捕捉 AI 圈最快的原始信号，包括：
+用 X 捕捉企业 AI Adoption Lead 需要最快知道的一手信号，包括：
 
-- 模型发布与更新
-- 产品演示与病毒传播
-- 工作流新范式
-- 社区立场突然转向
+- 基础研究：模型发布、论文、benchmark、evals、推理、多模态、agent、robotics、world model
+- 企业应用：企业 AI adoption、AI 平台、治理、ROI、案例、工具链、组织模式、研发提效
+- 汽车与工业：automotive AI、SDV、仿真、测试验证、需求工程、工程知识管理、工业软件、制造工程
+- 创业前沿：AI-native 产品、agent startup、新交互、垂直工具、未来可能迁移到企业的应用
 
 ## 前提
 
@@ -48,7 +48,7 @@ done
 
 记录实际使用端口：
 
-- 一旦某个端口通过标准可用条件，本次后续 X 搜索和 KOL 扫描都使用同一个端口。
+- 一旦某个端口通过标准可用条件，本次后续 X 搜索和账号扫描都使用同一个端口。
 - 在抓取日志或失败记录里写明实际使用的端口，例如 `CDP port: 9223`。
 
 如果 Chrome 没有用调试端口启动，重新启动示例：
@@ -81,89 +81,133 @@ ps -p <PID> -o pid,ppid,command=
 
 ## 推荐搜索组
 
+必须至少跑完以下 4 组搜索 URL。目的不是凑数量，而是保证基础研究、企业应用、汽车/工业、创业前沿都被覆盖。
+
+### 1. 基础研究 / 模型动向
+
 ```text
-https://x.com/search?q=(Claude+OR+ChatGPT+OR+Gemini+OR+Grok+OR+DeepSeek+OR+Cursor+OR+"Claude+Code"+OR+Manus)+(release+OR+launch+OR+update+OR+new+OR+demo)+min_faves:300+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
-
-https://x.com/search?q=("AI+agent"+OR+"browser+use"+OR+MCP+OR+"computer+use"+OR+n8n+OR+workflow)+(demo+OR+tutorial+OR+launch+OR+viral)+min_faves:200+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
-
-https://x.com/search?q=(Claude+OR+GPT+OR+Gemini+OR+Kimi+OR+豆包+OR+DeepSeek+OR+Manus)+(发布+OR+更新+OR+实测+OR+教程+OR+爆火)+min_faves:80+-is:retweet+lang:zh+since:{since_date}&src=typed_query&f=top
+https://x.com/search?q=("frontier+model"+OR+"reasoning+model"+OR+"multimodal+model"+OR+"world+model"+OR+"AI+benchmark"+OR+"SWE-bench"+OR+"agent+benchmark"+OR+"long+context"+OR+"robotics+foundation+model"+OR+evals)+(release+OR+paper+OR+benchmark+OR+SOTA+OR+launch+OR+update)+min_faves:200+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
 ```
 
-## 补充抓取：KOL 关注列表
-
-除了关键词搜索，再做一轮 `账号时间线/近期帖子` 扫描。目的不是凑数量，而是补足：
-
-- 一线产品/模型发布者的原始信号
-- AI 工具重度用户的真实体验
-- 技术、产品、增长视角的判断
-
-优先关注以下账号：
+### 2. 企业 AI 应用 / Adoption
 
 ```text
-@borischen
-@addyosmani
-@simonw
-@karpathy
-@AnthropicAI
+https://x.com/search?q=("enterprise+AI"+OR+"AI+adoption"+OR+"AI+transformation"+OR+"AI+governance"+OR+"AI+ROI"+OR+"AI+copilot"+OR+"internal+AI+platform"+OR+"AI+center+of+excellence"+OR+"AI+risk+management"+OR+"developer+productivity")+(case+study+OR+rollout+OR+governance+OR+platform+OR+workflow+OR+productivity+OR+security)+min_faves:100+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
+```
+
+### 3. 汽车研发 / 工业 AI
+
+```text
+https://x.com/search?q=("automotive+AI"+OR+"software-defined+vehicle"+OR+SDV+OR+"autonomous+driving+AI"+OR+"simulation+AI"+OR+"digital+twin+AI"+OR+"test+automation+AI"+OR+"requirements+engineering"+OR+MBSE+OR+PLM+OR+ALM)+(AI+OR+agent+OR+copilot+OR+automation+OR+platform+OR+workflow)+min_faves:50+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
+```
+
+### 4. 创业前沿 / AI-native 应用
+
+```text
+https://x.com/search?q=("AI+startup"+OR+"AI-native"+OR+"vertical+AI"+OR+"AI+agent+startup"+OR+"browser+agent"+OR+"coding+agent"+OR+"design+agent"+OR+"research+agent"+OR+"generative+UI"+OR+"MCP+app"+OR+"agent+marketplace"+OR+"vibe+coding")+(demo+OR+launch+OR+workflow+OR+product+OR+viral+OR+case+study)+min_faves:100+-is:retweet+lang:en+since:{since_date}&src=typed_query&f=top
+```
+
+### 中文补充搜索
+
+如果英文信号不足，或需要观察中文企业/汽车语境，补充：
+
+```text
+https://x.com/search?q=(企业AI+OR+AI落地+OR+AI治理+OR+研发提效+OR+汽车AI+OR+智能汽车+OR+软件定义汽车+OR+AI智能体+OR+AI创业)+(案例+OR+实践+OR+发布+OR+工具+OR+方法论+OR+趋势)+min_faves:50+-is:retweet+lang:zh+since:{since_date}&src=typed_query&f=top
+```
+
+## 补充抓取：账号关注列表
+
+除了关键词搜索，再做一轮 `账号时间线/近期帖子` 扫描。至少覆盖 12 个账号，且必须覆盖四类账号。
+
+### 基础研究 / 模型
+
+```text
 @OpenAI
+@AnthropicAI
+@GoogleDeepMind
+@MetaAI
+@MistralAI
 @deepseek_ai
+@karpathy
+@simonw
+@JeffDean
+@ylecun
+```
+
+### 企业平台 / Adoption / 治理
+
+```text
+@Microsoft
+@MSFTCopilot
+@GoogleCloud
+@awscloud
+@nvidia
+@salesforce
+@ServiceNow
+@UiPath
+@BCG
+@McKinsey
+@Gartner_inc
+@CIOonline
+```
+
+### 汽车 / 工业 / 工程软件
+
+```text
+@NVIDIADrive
+@BoschGlobal
+@Siemens
+@Dassault3DS
+@BMWGroup
+@MercedesBenz
+@VWGroup
+@ToyotaMotorCorp
+@Tesla_AI
+```
+
+### 创业前沿 / AI-native 产品
+
+```text
+@cursor_ai
+@vercel
+@Replit
+@lovable_dev
+@LangChainAI
+@browserbasehq
+@ComposioHQ
+@modal_labs
 @levelsio
 @steipete
-@sama
-@gregisenberg
-@paulg
-@mattshumer_
-@nikitabier
-@AYi_AInotes
 ```
-
-### 账号分组意图
-
-- `模型/产品官方`：`@AnthropicAI`, `@OpenAI`, `@deepseek_ai`
-- `核心开发者/技术实践`：`@borischen`, `@addyosmani`, `@simonw`, `@karpathy`, `@steipete`
-- `产品/增长/KOL`：`@levelsio`, `@gregisenberg`, `@mattshumer_`, `@nikitabier`, `@AYi_AInotes`
-- `宏观判断/行业叙事`：`@sama`, `@paulg`
 
 ### 扫描规则
 
-- 先跑搜索组，再看 KOL；不要只看 KOL 时间线
-- 至少跑完三组搜索 URL；如果某组失败，记录失败原因和页面状态
-- KOL 扫描至少覆盖 8 个账号，其中必须包含 `@OpenAI`、`@AnthropicAI`、`@simonw`、`@borischen`、`@steipete`
+- 先跑搜索组，再看账号；不要只看账号时间线
+- 至少跑完 4 组搜索 URL；如果某组失败，记录失败原因和页面状态
+- 账号扫描至少覆盖 12 个账号，其中必须包含 `@OpenAI`、`@AnthropicAI`、`@GoogleDeepMind` 或 `@MetaAI` 之一、`@Microsoft` 或 `@GoogleCloud` 之一、`@nvidia` 或 `@NVIDIADrive` 之一、`@cursor_ai`、`@simonw`
 - 默认只看近 7 天；如果用户指定某一天，就优先看该日期前后 48 小时
-- 优先原帖、长帖、演示帖、复盘帖；低信息量转发可跳过
-- 如果同一事件在搜索组里已经抓到，KOL 帖子只作为补充来源或社区判断，不单独重复记一条趋势
-- 如果某个 KOL 明显连续多天主导同一话题，可在 `跟进清单` 里记录该账号，而不是重复写多条
-- 对中文 AI 圈信号，`@AYi_AInotes` 可作为中文高互动补充源，但不能替代英文原始发布源
-
-### KOL 帖子保留标准
-
-- 帖子本身带来新信息：发布、实测、对比、限制、成本、采用反馈
-- 或者评论区明显出现高质量分歧、质疑、迁移信号
-- 或者该账号的判断足以影响我对某工具/模型的看法
-
-### 特别关注什么
-
-- `@borischen`, `@steipete`, `@simonw`：Claude Code / agent workflow / MCP 的真实使用摩擦
-- `@addyosmani`, `@karpathy`：技术范式变化是否值得进入长期学习清单
-- `@levelsio`, `@gregisenberg`, `@nikitabier`, `@mattshumer_`：AI 产品化和增长玩法是否出现新模式
-- `@sama`, `@paulg`：宏观叙事是否发生明显转向
-- `@AnthropicAI`, `@OpenAI`, `@deepseek_ai`：官方发布是否和社区体感一致
+- 优先原帖、官方发布、长帖、企业案例、工程复盘、产品演示、治理/风险讨论；低信息量转发可跳过
+- 如果同一事件在搜索组里已经抓到，账号帖子只作为补充来源或企业判断，不单独重复记一条趋势
+- 如果某个账号明显连续多天主导同一话题，可在 `跟进清单` 里记录该账号，而不是重复写多条
 
 ## 抓取字段
 
-- 作者
+- 作者 / 机构
 - 正文摘要
-- 点赞 / 转发
+- 点赞 / 转发 / 浏览（如页面可见）
 - 发布时间
 - 原帖 URL
 - 抓取方式：搜索页 / 账号时间线 / 趋势页
 - 抓取状态：成功 / 登录失效 / 风控 / 页面不可读 / CDP 不可用
+- 初步分类：基础研究 / 企业应用 / 创业前沿 / 风险信号
+- 对汽车研发中心的潜在影响
 
 ## 保留标准
 
-- 原帖优先于搬运号
-- 有明确事件、演示、判断或讨论升级
-- 至少能提炼一个学习点或监控点
+- 原帖、官方发布、论文、企业案例、产品演示优先于搬运号
+- 有明确事件、能力变化、企业采用案例、治理风险、工具链变化或讨论升级
+- 至少能提炼一个企业影响、采用门槛或后续动作
+- 对纯个人效率工具或营销帖，只有在能代表未来企业工作流迁移时才保留
 
 ## X 候选不足时的处理
 
@@ -179,7 +223,8 @@ https://x.com/search?q=(Claude+OR+GPT+OR+Gemini+OR+Kimi+OR+豆包+OR+DeepSeek+OR
 
 ## 观察重点
 
-- 哪些产品被反复提到
-- 哪些演示正在改变用户预期
-- 哪些评论区出现了明显质疑或失望
-- 哪些关键词值得加入长期监控
+- 哪些能力可能影响企业 AI 平台和工具选型
+- 哪些企业已经把 AI 从试点推向规模化部署
+- 哪些治理、安全、成本、数据问题被反复提及
+- 哪些汽车/工业场景出现真实采用迹象
+- 哪些创业产品代表未来可能进入企业的 AI-native 工作流
