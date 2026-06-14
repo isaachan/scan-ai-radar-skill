@@ -79,6 +79,17 @@ ps -p <PID> -o pid,ppid,command=
 
 `{since_date}` = 今天 -7 天，格式 `YYYY-MM-DD`
 
+## 抓取脚本
+
+实际抓取用 `../scripts/cdp.py`（边滚边增量去重，能抗 X 虚拟滚动并返回每条 `datetime`）。抓近窗信号时把下面搜索 URL 末尾的 `f=top` 换成 `f=live`，再交给脚本：
+
+```bash
+export no_proxy='*' NO_PROXY='*'
+python3 ../scripts/cdp.py "<search-or-profile-url>" --port 9223 --scrolls 10 --json
+```
+
+用返回的 `items[].ts`（UTC）做近 7 天过滤。脚本用法细节见 `SKILL.md` 的“抓取脚本：scripts/cdp.py”。
+
 ## 推荐搜索组
 
 必须至少跑完以下 4 组搜索 URL。目的不是凑数量，而是保证基础研究、企业应用、汽车/工业、创业前沿都被覆盖。

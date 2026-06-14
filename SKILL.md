@@ -120,6 +120,8 @@ obsidian vault="personal" vault info=path
 
 X 抓取是强制步骤。只要 X 的连通性、登录态、页面读取或风控出现技术问题，就立刻停止后续平台抓取，先修复 X；如果当次无法修复，直接通知用户当前阻塞原因，不要改用其他平台替代 X 主信号源。
 
+如果在获取 X 时发现 CDP 失败，必须先进入排查流程，检查端口、Chrome 进程、启动参数和 profile 状态；如果排查后仍无法修复本次 CDP 链路，则此次 skill 执行必须中断，不得继续用其他平台替代 X 主信号源。
+
 在进入 YouTube / Reddit / Hacker News 前，必须先完成一轮 X 抓取审计：
 
 1. 读取 `references/x.md`
@@ -127,6 +129,30 @@ X 抓取是强制步骤。只要 X 的连通性、登录态、页面读取或风
 3. 运行至少 4 组 X 搜索 URL：基础研究、企业应用、汽车研发/工业、创业前沿
 4. 扫描至少 12 个账号，必须覆盖模型/研究、企业平台、汽车/工业、创业前沿四类账号
 5. 从 X 候选里保留 6-12 条可复核信号，除非 X 抓取链路明确失败
+
+### 抓取脚本：scripts/cdp.py（默认抓取方式）
+
+X 抓取统一用本 skill 自带的 `scripts/cdp.py`，不要每次临时手写 CDP 代码。它解决了 X 时间线的虚拟滚动问题：边滚动边增量采集并按 `/status/` 链接去重，因此不会因为旧推文被卸载出 DOM 而丢内容；同时返回每条推文的 `datetime`，便于按近 7 天窗口过滤。
+
+```bash
+# 必须先绕过代理，再调用本机 CDP
+export no_proxy='*' NO_PROXY='*'
+cd .agents/skills/scan-ai-radar/scripts
+
+# 搜索：抓近窗信号时用 f=live（按时间倒序），不要只用 f=top（旧热帖会压住新帖）
+python3 cdp.py "https://x.com/search?q=...&f=live" --port 9223 --scrolls 10 --json
+
+# 账号时间线
+python3 cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 8 --json
+```
+
+使用要点：
+
+- 端口先按 `references/x.md` 探测 `9223` → `9222`，把通过的端口传给 `--port`
+- 搜索抓近窗用 `f=live`；需要看高热度共识再补一轮 `f=top`
+- `--scrolls` 控制翻页深度（默认 12），噪声多时配合更高 `min_faves`，而不是无限加深
+- 输出 JSON 字段：`loggedOut`、`count`、`items[].url/ts/text`；用 `ts`（UTC datetime）做近 7 天过滤，不要只信页面上的相对时间
+- 如果 `loggedOut` 为 true 或 `count` 异常偏低，按 `references/x.md` 的失败流程排查，不要假装“X 没有热点”
 
 只有满足以下任一条件，才允许把 Hacker News、官方博客或其他平台作为主依据：
 
@@ -349,7 +375,7 @@ sources:
 ## 相关技能协同
 
 - 需要操作 Obsidian 时，优先配合 `obsidian-cli` 或 `obsidian-markdown`
-- 用 CDP 控制已登录的 Chrome，抓取各平台的原始讨论和真实反馈
+- 用 CDP 控制已登录的 Chrome，抓取各平台的原始讨论和真实反馈；统一通过 `scripts/cdp.py` 调用，不要临时手写 CDP 逻辑
 
 ### 推荐 Obsidian CLI 用法
 
