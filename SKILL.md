@@ -150,6 +150,8 @@ python3 cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 8 --json
 
 - 端口先按 `references/x.md` 探测 `9223` → `9222`，把通过的端口传给 `--port`
 - 搜索抓近窗用 `f=live`；需要看高热度共识再补一轮 `f=top`
+- **新鲜度默认开启且关键**：脚本默认先开空白页 → `Network.setCacheDisabled` → 导航 → `Page.reload(ignoreCache)` 再采集。这是为了绕开 CDP / X 的强缓存——否则个人主页时间线会返回几天甚至几周前的旧帖，导致漏掉刚发生的大事件。除非明确要省时间，否则不要加 `--no-fresh`
+- 校验新鲜度：用返回的 `items[].ts` 看是否有近 1-2 天的帖子；如果一个活跃官方账号（如 @AnthropicAI、@OpenAI）最新帖还停在一周前，说明拿到的是缓存，必须重抓而不是下结论
 - `--scrolls` 控制翻页深度（默认 12），噪声多时配合更高 `min_faves`，而不是无限加深
 - 输出 JSON 字段：`loggedOut`、`count`、`items[].url/ts/text`；用 `ts`（UTC datetime）做近 7 天过滤，不要只信页面上的相对时间
 - 如果 `loggedOut` 为 true 或 `count` 异常偏低，按 `references/x.md` 的失败流程排查，不要假装“X 没有热点”
