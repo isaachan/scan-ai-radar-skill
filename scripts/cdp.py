@@ -28,7 +28,18 @@ Notes:
   - Bypasses any http(s)_proxy when talking to the local CDP endpoint.
 """
 import asyncio, json, sys, argparse, urllib.request
-import websockets
+try:
+    import websockets
+except ModuleNotFoundError:
+    print(
+        "Missing dependency: websockets\n"
+        "Install it before running cdp.py, for example:\n"
+        "  python3 -m venv /tmp/scan-ai-radar-venv\n"
+        "  /tmp/scan-ai-radar-venv/bin/pip install -r requirements.txt\n"
+        "Then rerun with /tmp/scan-ai-radar-venv/bin/python cdp.py ...",
+        file=sys.stderr,
+    )
+    raise
 
 def http_factory(port):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))

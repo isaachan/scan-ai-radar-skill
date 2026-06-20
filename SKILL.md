@@ -134,16 +134,26 @@ X 抓取是强制步骤。只要 X 的连通性、登录态、页面读取或风
 
 X 抓取统一用本 skill 自带的 `scripts/cdp.py`，不要每次临时手写 CDP 代码。它解决了 X 时间线的虚拟滚动问题：边滚动边增量采集并按 `/status/` 链接去重，因此不会因为旧推文被卸载出 DOM 而丢内容；同时返回每条推文的 `datetime`，便于按近 7 天窗口过滤。
 
+首次在新环境执行前，先做一次依赖自检。`cdp.py` 依赖 `websockets`；如果当前系统 Python 没装它，不要在失败后继续空跑搜索组或账号扫描，先补依赖再抓。
+
+推荐做法：
+
+```bash
+cd .agents/skills/scan-ai-radar/scripts
+python3 -m venv /tmp/scan-ai-radar-venv
+/tmp/scan-ai-radar-venv/bin/pip install -r requirements.txt
+```
+
 ```bash
 # 必须先绕过代理，再调用本机 CDP
 export no_proxy='*' NO_PROXY='*'
 cd .agents/skills/scan-ai-radar/scripts
 
 # 搜索：抓近窗信号时用 f=live（按时间倒序），不要只用 f=top（旧热帖会压住新帖）
-python3 cdp.py "https://x.com/search?q=...&f=live" --port 9223 --scrolls 10 --json
+/tmp/scan-ai-radar-venv/bin/python cdp.py "https://x.com/search?q=...&f=live" --port 9223 --scrolls 10 --json
 
 # 账号时间线
-python3 cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 8 --json
+/tmp/scan-ai-radar-venv/bin/python cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 8 --json
 ```
 
 使用要点：
@@ -155,6 +165,7 @@ python3 cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 8 --json
 - `--scrolls` 控制翻页深度（默认 12），噪声多时配合更高 `min_faves`，而不是无限加深
 - 输出 JSON 字段：`loggedOut`、`count`、`items[].url/ts/text`；用 `ts`（UTC datetime）做近 7 天过滤，不要只信页面上的相对时间
 - 如果 `loggedOut` 为 true 或 `count` 异常偏低，按 `references/x.md` 的失败流程排查，不要假装“X 没有热点”
+- 如果输出文件是空的、命令秒退，或看到 `ModuleNotFoundError: No module named 'websockets'`，先安装 `scripts/requirements.txt` 里的依赖；不要把“脚本没跑起来”误判成“X 没信号”
 
 只有满足以下任一条件，才允许把 Hacker News、官方博客或其他平台作为主依据：
 

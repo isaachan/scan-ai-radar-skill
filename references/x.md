@@ -84,11 +84,39 @@ ps -p <PID> -o pid,ppid,command=
 实际抓取用 `../scripts/cdp.py`（边滚边增量去重，能抗 X 虚拟滚动并返回每条 `datetime`）。抓近窗信号时把下面搜索 URL 末尾的 `f=top` 换成 `f=live`，再交给脚本：
 
 ```bash
+cd ../scripts
+python3 -m venv /tmp/scan-ai-radar-venv
+/tmp/scan-ai-radar-venv/bin/pip install -r requirements.txt
 export no_proxy='*' NO_PROXY='*'
-python3 ../scripts/cdp.py "<search-or-profile-url>" --port 9223 --scrolls 10 --json
+/tmp/scan-ai-radar-venv/bin/python cdp.py "<search-or-profile-url>" --port 9223 --scrolls 10 --json
 ```
 
 用返回的 `items[].ts`（UTC）做近 7 天过滤。脚本用法细节见 `SKILL.md` 的“抓取脚本：scripts/cdp.py”。
+
+如果命令执行后没有 JSON 输出、输出文件是 0 字节，或 stderr 出现 `ModuleNotFoundError: No module named 'websockets'`，优先判断为 Python 依赖没装，而不是 X 页面无内容。先安装 `requirements.txt`，再重跑最小样例：
+
+```bash
+cd ../scripts
+export no_proxy='*' NO_PROXY='*'
+/tmp/scan-ai-radar-venv/bin/python cdp.py "https://x.com/OpenAI" --port 9223 --scrolls 2 --json
+```
+
+如果 9223 没有监听，但不想杀掉用户当前默认 Chrome，可优先新开独立的 `Chrome-CDP` 实例：
+
+```bash
+open -na "Google Chrome" --args \
+  --remote-debugging-port=9223 \
+  --user-data-dir="$HOME/Library/Application Support/Google/Chrome-CDP" \
+  --profile-directory="Default" \
+  --no-first-run
+```
+
+然后再次验证：
+
+```bash
+curl --noproxy '*' -sS http://localhost:9223/json/version
+curl --noproxy '*' -sS http://localhost:9223/json/list
+```
 
 ## 推荐搜索组
 
