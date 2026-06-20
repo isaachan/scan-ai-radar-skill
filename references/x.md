@@ -85,8 +85,7 @@ ps -p <PID> -o pid,ppid,command=
 
 ```bash
 cd ../scripts
-python3 -m venv /tmp/scan-ai-radar-venv
-/tmp/scan-ai-radar-venv/bin/pip install -r requirements.txt
+./bootstrap.sh
 export no_proxy='*' NO_PROXY='*'
 /tmp/scan-ai-radar-venv/bin/python cdp.py "<search-or-profile-url>" --port 9223 --scrolls 10 --json
 ```

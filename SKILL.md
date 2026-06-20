@@ -140,8 +140,7 @@ X 抓取统一用本 skill 自带的 `scripts/cdp.py`，不要每次临时手写
 
 ```bash
 cd .agents/skills/scan-ai-radar/scripts
-python3 -m venv /tmp/scan-ai-radar-venv
-/tmp/scan-ai-radar-venv/bin/pip install -r requirements.txt
+./bootstrap.sh
 ```
 
 ```bash
@@ -166,6 +165,7 @@ cd .agents/skills/scan-ai-radar/scripts
 - 输出 JSON 字段：`loggedOut`、`count`、`items[].url/ts/text`；用 `ts`（UTC datetime）做近 7 天过滤，不要只信页面上的相对时间
 - 如果 `loggedOut` 为 true 或 `count` 异常偏低，按 `references/x.md` 的失败流程排查，不要假装“X 没有热点”
 - 如果输出文件是空的、命令秒退，或看到 `ModuleNotFoundError: No module named 'websockets'`，先安装 `scripts/requirements.txt` 里的依赖；不要把“脚本没跑起来”误判成“X 没信号”
+- `scripts/bootstrap.sh` 默认把虚拟环境装到 `/tmp/scan-ai-radar-venv`；如需改路径，可先设置 `SCAN_AI_RADAR_VENV=/your/path`
 
 只有满足以下任一条件，才允许把 Hacker News、官方博客或其他平台作为主依据：
 
