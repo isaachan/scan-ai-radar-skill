@@ -196,6 +196,39 @@ cd .agents/skills/scan-ai-radar/scripts
 
 只读取当前实际会用到的平台文件，不要一次性把所有参考内容都展开进上下文。
 
+### Reddit 抓取脚本：scripts/reddit.py（默认抓取方式）
+
+Reddit 默认不要再调用匿名 `.json` endpoint。它们现在经常直接返回 `HTTP 403: Blocked`，会把“抓取方式失效”误判成“Reddit 没讨论”。
+
+Reddit 抓取统一用本 skill 自带的 `scripts/reddit.py`，它直接抓 `old.reddit.com` 的 HTML 搜索结果页，并在需要时补抓帖子详情页的高赞评论。
+
+推荐做法：
+
+```bash
+cd .agents/skills/scan-ai-radar/scripts
+./bootstrap.sh
+```
+
+```bash
+cd .agents/skills/scan-ai-radar/scripts
+/tmp/scan-ai-radar-venv/bin/python reddit.py \
+  --subreddit LocalLLaMA \
+  --query "Claude Code" \
+  --sort top \
+  --time week \
+  --limit 5 \
+  --comments 2 \
+  --json
+```
+
+使用要点：
+
+- 优先抓高相关子版块，再按需扩到通用工程 / AI 社区
+- 默认先用 `top + week` 看高互动真实反馈，再补 `new` 看近 24 小时新抱怨或新迁移
+- `count: 0` 代表该查询当前没有结果；只有脚本报错、HTML 访问失败或结构不可解析时，才算 Reddit 抓取失败
+- `top_comments` 只作为补充信号，不要为了评论而忽略原帖本身是否与企业 adoption 有关
+- 如果需要复核页面结构或某条评论上下文，再手动打开对应 `permalink`
+
 ---
 
 ## 第三步：统一筛选规则
