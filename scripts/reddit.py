@@ -16,19 +16,25 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import re
+import socket
 import sys
 from dataclasses import dataclass
 from html import unescape
 from typing import Iterable
 from urllib.parse import quote_plus, urljoin
-from urllib.request import Request, build_opener
+from urllib.error import HTTPError
+from urllib.error import URLError
+from urllib.request import ProxyHandler, Request, build_opener
 
 from bs4 import BeautifulSoup
+import websockets
 
 
 BASE = "https://old.reddit.com"
+BASE_WWW = "https://www.reddit.com"
 UA = "redbot/0.1 by openai-codex"
 
 
@@ -47,10 +53,81 @@ class SearchResult:
 
 
 def opener():
-    return build_opener()
+    return build_opener(ProxyHandler({}))
 
 
-def fetch(url: str) -> str:
+def http_factory(port: int):
+    op = build_opener(ProxyHandler({}))
+
+    def http(path: str, method: str = "GET"):
+        req = Request(f"http://127.0.0.1:{port}{path}", method=method)
+        return json.load(op.open(req, timeout=10))
+
+    return http
+
+
+def probe_cdp_port() -> int | None:
+    for port in (9223, 9222):
+        try:
+            info = http_factory(port)("/json/version")
+        except Exception:
+            continue
+        if isinstance(info, dict) and info.get("Browser") and info.get("Protocol-Version"):
+            return port
+    return None
+
+
+async def cdp_fetch(url: str, port: int, wait: float = 4.5) -> str:
+    http = http_factory(port)
+    try:
+        tab = http("/json/new?about:blank", method="PUT")
+    except Exception:
+        tab = http("/json/new?about:blank")
+    ws_url, tid = tab["webSocketDebuggerUrl"], tab["id"]
+    try:
+        async with websockets.connect(ws_url, max_size=None, open_timeout=20) as ws:
+            mid = 0
+
+            async def cmd(method: str, params: dict | None = None, timeout: float = 60):
+                nonlocal mid
+                mid += 1
+                current = mid
+                await ws.send(json.dumps({"id": current, "method": method, "params": params or {}}))
+                while True:
+                    resp = json.loads(await asyncio.wait_for(ws.recv(), timeout=timeout))
+                    if resp.get("id") == current:
+                        return resp
+
+            await cmd("Page.enable")
+            await cmd("Runtime.enable")
+            await cmd("Network.enable")
+            await cmd("Network.setCacheDisabled", {"cacheDisabled": True})
+            await cmd("Page.navigate", {"url": url})
+            await asyncio.sleep(wait)
+            result = await cmd(
+                "Runtime.evaluate",
+                {"expression": "document.documentElement.outerHTML", "returnByValue": True},
+                timeout=30,
+            )
+            return result.get("result", {}).get("result", {}).get("value", "")
+    finally:
+        try:
+            http(f"/json/close/{tid}")
+        except Exception:
+            pass
+
+
+def fetch_via_cdp(url: str, port: int | None = None) -> str:
+    actual_port = port or probe_cdp_port()
+    if not actual_port:
+        raise RuntimeError("Reddit HTTP fetch was blocked and no usable Chrome CDP port was found (tried 9223, 9222).")
+    html = asyncio.run(cdp_fetch(url, actual_port))
+    if not html:
+        raise RuntimeError(f"Chrome CDP fetched an empty Reddit page via port {actual_port}.")
+    return html
+
+
+def fetch(url: str, cdp_port: int | None = None, allow_cdp_fallback: bool = True) -> str:
     req = Request(
         url,
         headers={
@@ -60,8 +137,17 @@ def fetch(url: str) -> str:
             "Referer": BASE + "/",
         },
     )
-    with opener().open(req, timeout=30) as resp:
-        return resp.read().decode("utf-8", "ignore")
+    try:
+        with opener().open(req, timeout=30) as resp:
+            return resp.read().decode("utf-8", "ignore")
+    except HTTPError as e:
+        if e.code == 403 and allow_cdp_fallback:
+            return fetch_via_cdp(url.replace(BASE, BASE_WWW, 1), port=cdp_port)
+        raise
+    except (URLError, TimeoutError, socket.timeout):
+        if allow_cdp_fallback:
+            return fetch_via_cdp(url.replace(BASE, BASE_WWW, 1), port=cdp_port)
+        raise
 
 
 def clean_text(text: str) -> str:
@@ -85,13 +171,45 @@ def extract_result_cards(html: str) -> Iterable[BeautifulSoup]:
         yield card
 
 
-def parse_comment_page(permalink: str, limit: int) -> list[dict]:
+def parse_current_comment_page(html: str, limit: int) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    out = []
+    seen = set()
+    for comment in soup.select("shreddit-comment[thingid^='t1_']"):
+        cid = comment.get("thingid")
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        text_el = comment.select_one("[slot='comment'] div[id$='-post-rtjson-content']")
+        text = clean_text(text_el.get_text(" ", strip=True) if text_el else "")
+        if not text:
+            continue
+        author = clean_text(comment.get("author", ""))
+        if "i am a bot" in text.lower() or author.lower().endswith("bot"):
+            continue
+        permalink = comment.get("permalink", "")
+        out.append(
+            {
+                "author": author,
+                "score": parse_int(comment.get("score")),
+                "ts": comment.get("created"),
+                "permalink": urljoin(BASE_WWW, permalink) if permalink else None,
+                "text": text[:500],
+            }
+        )
+        if len(out) >= limit:
+            break
+    return out
+
+
+def parse_comment_page(permalink: str, limit: int, cdp_port: int | None = None) -> list[dict]:
     if limit <= 0:
         return []
-    html = fetch(
-        urljoin(BASE, permalink)
-        + f"?sort=top&depth=1&limit={max(limit * 4, 10)}"
-    )
+    url = urljoin(BASE, permalink) + f"?sort=top&depth=1&limit={max(limit * 4, 10)}"
+    html = fetch(url, cdp_port=cdp_port)
+    if "shreddit-comment" in html:
+        return parse_current_comment_page(html, limit)
+
     soup = BeautifulSoup(html, "html.parser")
     out = []
     seen = set()
@@ -125,7 +243,58 @@ def parse_comment_page(permalink: str, limit: int) -> list[dict]:
     return out
 
 
-def parse_search(html: str, comments: int, limit: int) -> list[SearchResult]:
+def parse_current_search(html: str, comments: int, limit: int, cdp_port: int | None = None) -> list[SearchResult]:
+    soup = BeautifulSoup(html, "html.parser")
+    results: list[SearchResult] = []
+    for card in soup.select("search-telemetry-tracker[consume-events='post/consume/post']"):
+        meta = {}
+        raw_meta = card.get("data-faceplate-tracking-context")
+        if raw_meta:
+            try:
+                meta = json.loads(raw_meta)
+            except json.JSONDecodeError:
+                meta = {}
+
+        title_el = card.select_one("a[data-testid='post-title-text']")
+        permalink = title_el.get("href", "") if title_el else ""
+        if not permalink:
+            continue
+
+        subreddit_name = (
+            meta.get("subreddit", {}).get("name")
+            or clean_text(card.select_one(".post-credit-row a[href*='/r/']").get_text(" ", strip=True) if card.select_one(".post-credit-row a[href*='/r/']") else "")
+        )
+        author = meta.get("profile", {}).get("name") or ""
+        time_el = card.select_one("time")
+        counter = clean_text(card.select_one("[data-testid='search-counter-row']").get_text(" ", strip=True) if card.select_one("[data-testid='search-counter-row']") else "")
+        score = parse_int(counter)
+        comments_count = parse_int(counter.split("comments")[0].split("·")[-1] if "comments" in counter and "·" in counter else counter)
+        summary_el = card.select_one("a.relative.text-14")
+        summary = clean_text(summary_el.get_text(" ", strip=True) if summary_el else "")
+
+        results.append(
+            SearchResult(
+                title=clean_text(title_el.get_text(" ", strip=True)),
+                subreddit=clean_text(subreddit_name),
+                score=score,
+                comments_count=comments_count,
+                author=clean_text(author),
+                ts=time_el.get("datetime") if time_el else None,
+                permalink=urljoin(BASE_WWW, permalink),
+                url=urljoin(BASE_WWW, permalink),
+                summary=summary[:700],
+                top_comments=parse_comment_page(permalink, comments, cdp_port=cdp_port),
+            )
+        )
+        if len(results) >= limit:
+            break
+    return results
+
+
+def parse_search(html: str, comments: int, limit: int, cdp_port: int | None = None) -> list[SearchResult]:
+    if "search-telemetry-tracker" in html and "data-testid=\"search-sdui-post\"" in html:
+        return parse_current_search(html, comments, limit, cdp_port=cdp_port)
+
     results: list[SearchResult] = []
     for card in extract_result_cards(html):
         title_el = card.select_one("a.search-title")
@@ -166,7 +335,7 @@ def parse_search(html: str, comments: int, limit: int) -> list[SearchResult]:
                 permalink=permalink,
                 url=external_url,
                 summary=clean_text(summary_el.get_text(" ", strip=True) if summary_el else "")[:700],
-                top_comments=parse_comment_page(rel_path, comments),
+                top_comments=parse_comment_page(rel_path, comments, cdp_port=cdp_port),
             )
         )
         if len(results) >= limit:
@@ -189,12 +358,14 @@ def main() -> int:
     ap.add_argument("--time", default="week", choices=["hour", "day", "week", "month", "year", "all"])
     ap.add_argument("--limit", type=int, default=5)
     ap.add_argument("--comments", type=int, default=2, help="Top comments to fetch per result")
+    ap.add_argument("--cdp-port", type=int, help="Chrome CDP port for browser fallback (default: auto probe 9223 -> 9222)")
+    ap.add_argument("--no-cdp-fallback", action="store_true", help="Do not use Chrome CDP when anonymous Reddit fetch returns HTTP 403")
     ap.add_argument("--json", action="store_true", help="Pretty print JSON")
     args = ap.parse_args()
 
     url = build_search_url(args.subreddit, args.query, args.sort, args.time)
-    html = fetch(url)
-    results = parse_search(html, args.comments, args.limit)
+    html = fetch(url, cdp_port=args.cdp_port, allow_cdp_fallback=not args.no_cdp_fallback)
+    results = parse_search(html, args.comments, args.limit, cdp_port=args.cdp_port)
     payload = {
         "query": args.query,
         "subreddit": args.subreddit,

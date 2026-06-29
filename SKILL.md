@@ -200,7 +200,7 @@ cd .agents/skills/scan-ai-radar/scripts
 
 Reddit 默认不要再调用匿名 `.json` endpoint。它们现在经常直接返回 `HTTP 403: Blocked`，会把“抓取方式失效”误判成“Reddit 没讨论”。
 
-Reddit 抓取统一用本 skill 自带的 `scripts/reddit.py`，它直接抓 `old.reddit.com` 的 HTML 搜索结果页，并在需要时补抓帖子详情页的高赞评论。
+Reddit 抓取统一用本 skill 自带的 `scripts/reddit.py`。它会先尝试轻量 HTTP 抓取；如果 Reddit 对匿名请求返回 `HTTP 403: Blocked` 或直接超时，则自动回退到本机 Chrome CDP，抓浏览器实际渲染的 Reddit 搜索页和帖子页，再解析结果与高赞评论。
 
 推荐做法：
 

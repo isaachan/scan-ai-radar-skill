@@ -40,7 +40,7 @@
 ## 抓取方式
 
 - 默认不要再调用 `reddit.com/*.json` 或 `old.reddit.com/*.json` 匿名 JSON endpoint。它们现在经常直接返回 `HTTP 403: Blocked`，不是“该主题没有讨论”。
-- 默认改用本 skill 自带的 `scripts/reddit.py`，抓 `old.reddit.com` 的 HTML 搜索结果页，并在需要时补抓帖子页的高赞评论。
+- 默认改用本 skill 自带的 `scripts/reddit.py`。它会先尝试轻量 HTTP 抓取；如果 Reddit 对匿名请求返回 `HTTP 403: Blocked` 或直接超时，则自动回退到本机 Chrome CDP，抓浏览器实际渲染出来的 Reddit 搜索页和帖子页，再解析结果与高赞评论。
 - 搜索过去 7 天高互动帖子，优先 `top`，再按需补 `new` / `comments`
 - 留意“真实体验”“踩坑”“替代方案”“公司禁用”“安全问题”“成本失控”“生产环境”“团队 rollout”
 - 如果 HTML 搜索页也失败，记录失败原因；不要编造 Reddit 信号
@@ -82,10 +82,11 @@ cd .agents/skills/scan-ai-radar/scripts
 
 实现说明：
 
-- `reddit.py` 统一使用 `old.reddit.com`
-- 请求头固定为 bot-style `User-Agent`，避免被 Reddit 当作通用匿名脚本直接封掉
-- 搜索结果页可拿到标题、分数、评论数、时间、摘要、子版块和 permalink
+- `reddit.py` 默认先用轻量 HTTP 请求；如果匿名请求被拦，会自动切到 Chrome CDP 浏览器抓取
+- HTTP 路径优先尝试 `old.reddit.com`；CDP 回退路径使用浏览器实际打开的 `www.reddit.com`
+- 脚本可拿到标题、分数、评论数、时间、摘要、子版块和 permalink
 - 帖子详情页可补抓高赞评论，用于提取真实采用反馈和风险信号
+- 如果需要强制指定浏览器调试端口，可传 `--cdp-port 9223`；默认自动探测 `9223 -> 9222`
 
 ## 抓取字段
 
