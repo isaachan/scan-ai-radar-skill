@@ -77,7 +77,7 @@ def probe_cdp_port() -> int | None:
     return None
 
 
-async def cdp_fetch(url: str, port: int, wait: float = 4.5) -> str:
+async def cdp_fetch(url: str, port: int, wait: float = 2.5) -> str:
     http = http_factory(port)
     try:
         tab = http("/json/new?about:blank", method="PUT")
@@ -88,7 +88,7 @@ async def cdp_fetch(url: str, port: int, wait: float = 4.5) -> str:
         async with websockets.connect(ws_url, max_size=None, open_timeout=20) as ws:
             mid = 0
 
-            async def cmd(method: str, params: dict | None = None, timeout: float = 60):
+            async def cmd(method: str, params: dict | None = None, timeout: float = 20):
                 nonlocal mid
                 mid += 1
                 current = mid
@@ -138,7 +138,7 @@ def fetch(url: str, cdp_port: int | None = None, allow_cdp_fallback: bool = True
         },
     )
     try:
-        with opener().open(req, timeout=30) as resp:
+        with opener().open(req, timeout=8) as resp:
             return resp.read().decode("utf-8", "ignore")
     except HTTPError as e:
         if e.code == 403 and allow_cdp_fallback:
@@ -206,7 +206,10 @@ def parse_comment_page(permalink: str, limit: int, cdp_port: int | None = None) 
     if limit <= 0:
         return []
     url = urljoin(BASE, permalink) + f"?sort=top&depth=1&limit={max(limit * 4, 10)}"
-    html = fetch(url, cdp_port=cdp_port)
+    try:
+        html = fetch(url, cdp_port=cdp_port)
+    except Exception:
+        return []
     if "shreddit-comment" in html:
         return parse_current_comment_page(html, limit)
 
